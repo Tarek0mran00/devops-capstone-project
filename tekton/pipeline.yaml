@@ -1,7 +1,8 @@
 #
-# This pipeline needs the following tasks from Tekton Hub:
-#   - git-clone
-#   - flake8
+# This pipeline needs the following tasks:
+#   - git-clone        (Tekton Hub)
+#   - flake8           (Tekton Hub)
+#   - buildah          (OpenShift ClusterTask)
 #
 ---
 apiVersion: tekton.dev/v1beta1
@@ -18,6 +19,8 @@ spec:
     - name: branch
       description: The git branch to clone
       default: main
+    - name: build-image
+      description: The fully qualified image name to build
 
   tasks:
     - name: init
@@ -72,3 +75,17 @@ spec:
           value: "-v --with-spec --spec-color"
       runAfter:
         - clone
+
+    - name: build
+      workspaces:
+        - name: source
+          workspace: pipeline-workspace
+      taskRef:
+        name: buildah
+        kind: ClusterTask
+      params:
+        - name: IMAGE
+          value: "$(params.build-image)"
+      runAfter:
+        - lint
+        - tests
